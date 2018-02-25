@@ -6,8 +6,9 @@ const settings = require('../../lib/settings');
 const mongo = require('../../lib/mongo');
 const utils = require('../../lib/utils');
 const parse = require('../../lib/parse');
-const dashboardEvents = require('../../lib/events');
-const emailSender = require('../../lib/email');
+const webhooks = require('../../lib/webhooks');
+const dashboardWebSocket = require('../../lib/dashboardWebSocket');
+const mailer = require('../../lib/mailer');
 const ObjectID = require('mongodb').ObjectID;
 const ProductsService = require('../products/products');
 const CustomersService = require('../customers/customers');
@@ -37,8 +38,8 @@ class OrdersService {
     const hold = parse.getBooleanIfValid(params.hold);
     const grand_total_min = parse.getNumberIfPositive(params.grand_total_min);
     const grand_total_max = parse.getNumberIfPositive(params.grand_total_max);
-    const date_created_min = parse.getDateIfValid(params.date_created_min);
-    const date_created_max = parse.getDateIfValid(params.date_created_max);
+    const date_placed_min = parse.getDateIfValid(params.date_placed_min);
+    const date_placed_max = parse.getDateIfValid(params.date_placed_max);
     const date_closed_min = parse.getDateIfValid(params.date_closed_min);
     const date_closed_max = parse.getDateIfValid(params.date_closed_max);
 
@@ -100,23 +101,23 @@ class OrdersService {
       }
     }
 
-    if (date_created_min || date_created_max) {
+    if (date_placed_min || date_placed_max) {
       filter.date_placed = {};
-      if (date_created_min) {
-        filter.date_placed['$gte'] = date_created_min.toISOString();
+      if (date_placed_min) {
+        filter.date_placed['$gte'] = date_placed_min;
       }
-      if (date_created_max) {
-        filter.date_placed['$lte'] = date_created_max.toISOString();
+      if (date_placed_max) {
+        filter.date_placed['$lte'] = date_placed_max;
       }
     }
 
     if (date_closed_min || date_closed_max) {
       filter.date_closed = {};
       if (date_closed_min) {
-        filter.date_closed['$gte'] = date_closed_min.toISOString();
+        filter.date_closed['$gte'] = date_closed_min;
       }
       if (date_closed_max) {
-        filter.date_closed['$lte'] = date_closed_max.toISOString();
+        filter.date_closed['$lte'] = date_closed_max;
       }
     }
 
@@ -179,12 +180,12 @@ class OrdersService {
             return customers.data[0].id;
           } else {
             // if customer not exists - create new customer and set new customer_id
-            var addresses = [];
+            let addresses = [];
             if (order.shipping_address) {
               addresses.push(order.shipping_address);
             }
 
-            var customerrFullName = order.shipping_address && order.shipping_address.full_name
+            let customerrFullName = order.shipping_address && order.shipping_address.full_name
               ? order.shipping_address.full_name
               : '';
 
@@ -199,32 +200,38 @@ class OrdersService {
     })
   }
 
-  addOrder(data) {
-    return this.getValidDocumentForInsert(data).then(order => mongo.db.collection('orders').insertMany([order])).then(res => this.getSingleOrder(res.ops[0]._id.toString()))
+  async addOrder(data) {
+    const order = await this.getValidDocumentForInsert(data);
+    const insertResponse = await mongo.db.collection('orders').insertMany([order]);
+    const newOrderId = insertResponse.ops[0]._id.toString();
+    const newOrder = await this.getSingleOrder(newOrderId);
+    return newOrder;
   }
 
-  updateOrder(id, data) {
+  async updateOrder(id, data) {
     if (!ObjectID.isValid(id)) {
       return Promise.reject('Invalid identifier');
     }
     const orderObjectID = new ObjectID(id);
-    return this.getValidDocumentForUpdate(id, data)
-      .then(orderData => mongo.db.collection('orders').updateOne({_id: orderObjectID}, {$set: orderData}))
-      .then(res => this.getSingleOrder(id))
-      .then(order => {
-        this.updateCustomerStatistics(order.customer_id);
-        return order;
-      });
+    const orderData = await this.getValidDocumentForUpdate(id, data);
+    const updateResponse = await mongo.db.collection('orders').updateOne({_id: orderObjectID}, {$set: orderData});
+    const updatedOrder = await this.getSingleOrder(id);
+    if(updatedOrder.draft === false){
+      await webhooks.trigger({ event: webhooks.events.ORDER_UPDATED, payload: updatedOrder });
+    }
+    await this.updateCustomerStatistics(updatedOrder.customer_id);
+    return updatedOrder;
   }
 
-  deleteOrder(orderId) {
+  async deleteOrder(orderId) {
     if (!ObjectID.isValid(orderId)) {
       return Promise.reject('Invalid identifier');
     }
     const orderObjectID = new ObjectID(orderId);
-    return mongo.db.collection('orders').deleteOne({'_id': orderObjectID}).then(deleteResponse => {
-      return deleteResponse.deletedCount > 0;
-    });
+    const order = await this.getSingleOrder(orderId);
+    await webhooks.trigger({ event: webhooks.events.ORDER_DELETED, payload: order });
+    const deleteResponse = await mongo.db.collection('orders').deleteOne({_id: orderObjectID});
+    return deleteResponse.deletedCount > 0;
   }
 
   parseDiscountItem(discount) {
@@ -544,16 +551,6 @@ class OrdersService {
     return order;
   }
 
-  sendOrderNotification(message) {
-    return emailSender.send(message).then(info => {
-      winston.info('Email order confirmation', info);
-      return info;
-    }).catch(err => {
-      winston.error('Email order confirmation', err);
-      return err;
-    });
-  }
-
   getEmailSubject(emailTemplate, order) {
     const subjectTemplate = handlebars.compile(emailTemplate.subject);
     return subjectTemplate(order);
@@ -564,63 +561,56 @@ class OrdersService {
     return bodyTemplate(order);
   }
 
-  sendEmail(toEmail, copyTo, subject, body) {
-    return Promise.all([
-      this.sendOrderNotification({
+  async sendAllMails(toEmail, copyTo, subject, body) {
+    await Promise.all([
+      mailer.send({
         to: toEmail,
         subject: subject,
         html: body
       }),
-      this.sendOrderNotification({
+      mailer.send({
         to: copyTo,
         subject: subject,
         html: body
       }),
-    ])
-    .then(([ firstEnvelope, secondEnvelope ]) => {
-      return true;
-    });
+    ]);
   }
 
-  checkoutOrder(orderId) {
+  async checkoutOrder(orderId) {
     /*
-    + get order info
-    + return order info
-    + send emails
-    + order confirmation template
-    + update stock
+    TODO:
+    - check order exists
+    - check order not placed
     - fire Webhooks
     */
-    return Promise.all([
-        this.getOrCreateCustomer(orderId).then(customer_id => {
-          return this.updateOrder(orderId, {
-            customer_id: customer_id,
-            date_placed: new Date(),
-            draft: false
-          })
-        }),
-        EmailTemplatesService.getEmailTemplate('order_confirmation'),
-        SettingsService.getSettings()
-      ]).then(([ order, emailTemplate, dashboardSettings ]) => {
-        const subject = this.getEmailSubject(emailTemplate, order);
-        const body = this.getEmailBody(emailTemplate, order);
-        const copyTo = dashboardSettings.order_confirmation_copy_to;
-
-        dashboardEvents.sendMessage({
-          'type': dashboardEvents.ORDER_RECEIVED,
-          'id': orderId,
-          'number': order.number,
-          'total': order.grand_total
+    const [order, emailTemplate, dashboardSettings] = await Promise.all([
+      this.getOrCreateCustomer(orderId).then(customer_id => {
+        return this.updateOrder(orderId, {
+          customer_id: customer_id,
+          date_placed: new Date(),
+          draft: false
         })
+      }),
+      EmailTemplatesService.getEmailTemplate('order_confirmation'),
+      SettingsService.getSettings()
+    ]);
 
-        return Promise.all([
-          this.sendEmail(order.email, copyTo, subject, body),
-          ProductStockService.handleOrderCheckout(orderId)
-        ])
-        .then(([ sendResult, stockResult ]) => {
-          return order;
-        });
-      });
+    const subject = this.getEmailSubject(emailTemplate, order);
+    const body = this.getEmailBody(emailTemplate, order);
+    const copyTo = dashboardSettings.order_confirmation_copy_to;
+
+    dashboardWebSocket.send({
+      event: dashboardWebSocket.events.ORDER_CREATED,
+      payload: order
+    });
+
+    await Promise.all([
+      webhooks.trigger({ event: webhooks.events.ORDER_CREATED, payload: order }),
+      this.sendAllMails(order.email, copyTo, subject, body),
+      ProductStockService.handleOrderCheckout(orderId)
+    ]);
+
+    return order;
   }
 
   cancelOrder(orderId) {

@@ -2,6 +2,10 @@
   background-color: #f5f5f5;
 }
 
+.columns-checkout {
+  flex-direction: row-reverse;
+}
+
 .checkout-form {
   margin: 0;
   padding: 0;
@@ -26,20 +30,30 @@
   margin-bottom: 14px;
 }
 
-.checkout-field input[type="text"], .checkout-field input[type="email"], .checkout-field input[type="tel"], .checkout-field textarea {
+.checkout-field input[type="text"],
+.checkout-field input[type="email"],
+.checkout-field input[type="tel"],
+.checkout-field textarea {
   width: 100%;
   border: 1px solid #e0e0e0;
   border-radius: 3px;
   padding: 12px 16px;
 }
 
-.checkout-field input[type="text"].invalid, .checkout-field input[type="email"].invalid, .checkout-field input[type="tel"].invalid, .checkout-field textarea.invalid {
-  border: 1px solid #e96161;
-}
-
-.checkout-field input[type="text"]:focus, .checkout-field input[type="email"]:focus, .checkout-field input[type="tel"]:focus, .checkout-field textarea:focus {
+.checkout-field input[type="text"]:focus,
+.checkout-field input[type="email"]:focus,
+.checkout-field input[type="tel"]:focus,
+.checkout-field textarea:focus {
   outline: none;
   border: 1px solid #a1a1a1;
+}
+
+.checkout-field input[type="text"].invalid,
+.checkout-field input[type="email"].invalid,
+.checkout-field input[type="tel"].invalid,
+.checkout-field textarea.invalid {
+  border: 1px solid #e96161;
+  background-color: rgba(233, 97, 97, 0.05);
 }
 
 .checkout-field label {
@@ -139,7 +153,10 @@
 }
 
 .shipping-method-rate {
-
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding-left: 10px;
 }
 
 .payment-method-logo {
@@ -149,6 +166,53 @@
 .checkout-box, .checkout-step {
   padding: 30px;
   background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 3px 8px 0 rgba(0,0,0,0.1);
+}
+
+.checkout-box .summary-block {
+  background-color: #f2f3f5;
+  margin: 0 -30px 0 -30px;
+  padding: 30px;
+  border-radius: 0 0 8px 8px;
+  font-size: 0.9rem;
+  line-height: 1.8rem;
+  color: #656565;
+}
+
+.checkout-box hr.separator {
+  height: 2px;
+  background-color: #ebebed;
+}
+
+.checkout-box .product-image {
+  max-width: 80px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.checkout-box .price {
+  font-size: 0.9rem;
+}
+
+.checkout-box .total-text {
+  font-weight: 500;
+}
+
+.checkout-box .total-price {
+  text-align: right;
+  font-weight: 500;
+  font-size: 1.25rem;
+}
+
+.checkout-box .qty {
+  align-items: center;
+  margin: 5px 0;
+  display: flex;
+}
+
+.checkout-box .qty span:first-of-type {
+  margin-right: 10px;
 }
 
 .checkout-step {
@@ -209,11 +273,27 @@ Mobile
   .section-checkout {
     padding-left: 0;
     padding-right: 0;
+    padding-top: 0;
+  }
+
+  .columns-checkout {
+    padding: 0;
+    margin: 0;
   }
 
   .checkout-box {
     padding-left: 20px;
     padding-right: 20px;
+  }
+
+  .checkout-box, .checkout-step {
+    // border-radius: 0px;
+    // box-shadow: none;
+  }
+
+  .checkout-box .summary-block {
+    margin: 0 -20px 0 -20px;
+    // border-radius: 0;
   }
 
   .checkout-success-row {

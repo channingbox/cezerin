@@ -1,7 +1,6 @@
-var SitemapService = require('../services/sitemap');
-
-var slug = require('slug');
-var slugConfig = {
+const SitemapService = require('../services/sitemap');
+const slug = require('slug');
+const slugConfig = {
     symbols: false,         // replace unicode symbols or not
     remove: null,          // (optional) regex to remove characters
     lower: true           // result in lower case
@@ -36,8 +35,14 @@ const getCorrectFileName = (filename) => {
   }
 }
 
+const getProjectionFromFields = fields => {
+  const fieldsArray = (fields && fields.length > 0) ? fields.split(',') : [];
+  return Object.assign({}, ...fieldsArray.map(key => ({[key]: 1}) ));
+}
+
 module.exports = {
   cleanSlug: cleanSlug,
   getAvailableSlug: getAvailableSlug,
-  getCorrectFileName: getCorrectFileName
+  getCorrectFileName: getCorrectFileName,
+  getProjectionFromFields: getProjectionFromFields
 }

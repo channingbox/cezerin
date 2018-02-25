@@ -14,11 +14,11 @@ module.exports = () => {
       vendor: [
         'react',
         'react-dom',
-        'redux',
         'react-redux',
         'redux-thunk',
-        'react-router',
+        'react-router-dom',
         'react-dropzone',
+        'redux',
         'redux-form',
         'redux-form-material-ui',
         'material-ui'
@@ -86,7 +86,7 @@ module.exports = () => {
     plugins: [
       new webpack.DefinePlugin({ APPLICATION_CONFIG: JSON.stringify(applicationConfig) }),
       new webpack.DefinePlugin({ APPLICATION_TEXT: JSON.stringify(applicationText) }),
-      new ExtractTextPlugin("admin-assets/css/app-[chunkhash].css"),
+      new ExtractTextPlugin("admin-assets/css/app-[contenthash].css"),
       new webpack.optimize.CommonsChunkPlugin({
         name: 'vendor',
         minChunks: Infinity,

@@ -5,14 +5,6 @@ import { animateScroll } from 'react-scroll'
 import api from '../client/api'
 import * as analytics from './analytics'
 
-export const fetchProduct = product_id => (dispatch, getState) => {
-  dispatch(requestProduct())
-  return api.ajax.products.retrieve(product_id).then(({status, json}) => {
-    dispatch(receiveProduct(json))
-    analytics.productView({ product: json })
-  }).catch(error => {});
-}
-
 const requestProduct = () => ({type: t.PRODUCT_REQUEST})
 
 const receiveProduct = product => ({type: t.PRODUCT_RECEIVE, product})
@@ -24,11 +16,12 @@ export const fetchProducts = () => (dispatch, getState) => {
   let filter = getParsedProductFilter(app.productFilter);
 
   return api.ajax.products.list(filter).then(({status, json}) => {
-    dispatch(receiveProducts(json))
+    dispatch(receiveProducts(null));
+    dispatch(receiveProducts(json));
   }).catch(error => {});
 }
 
-export const getProductFilterForCategory = (locationSearch) => {
+export const getProductFilterForCategory = (locationSearch, sortBy) => {
   const queryFilter = queryString.parse(locationSearch);
 
   let attributes = {};
@@ -42,7 +35,8 @@ export const getProductFilterForCategory = (locationSearch) => {
     priceFrom: parseInt(queryFilter.price_from || 0),
     priceTo: parseInt(queryFilter.price_to || 0),
     attributes: attributes,
-    search: null
+    search: null,
+    sort: sortBy
   }
 }
 
@@ -53,7 +47,8 @@ export const getProductFilterForSearch = (locationSearch) => {
     categoryId: null,
     priceFrom: parseInt(queryFilter.price_from || 0),
     priceTo: parseInt(queryFilter.price_to || 0),
-    search: queryFilter.search
+    search: queryFilter.search,
+    sort: 'search'
   }
 }
 
@@ -101,13 +96,6 @@ export const fetchMoreProducts = () => (dispatch, getState) => {
 const requestMoreProducts = () => ({type: t.MORE_PRODUCTS_REQUEST})
 
 const receiveMoreProducts = products => ({type: t.MORE_PRODUCTS_RECEIVE, products})
-
-export const fetchPage = pageId => (dispatch, getState) => {
-  dispatch(requestPage());
-  return api.ajax.pages.retrieve(pageId).then(({status, json}) => {
-    dispatch(receivePage(json))
-  }).catch(error => {});
-}
 
 const requestPage = () => ({type: t.PAGE_REQUEST})
 
@@ -370,9 +358,10 @@ export const setCurrentPage = location => (dispatch, getState) => {
         path: category.path,
         resource: category.id
       };
-      dispatch(receiveSitemap(newCurrentPage))
+      dispatch(receiveSitemap(newCurrentPage)) // remove .data
       dispatch(fetchDataOnCurrentPageChange(newCurrentPage))
     } else {
+
       api.ajax.sitemap.retrieve({ path: locationPathname })
       .then(sitemapResponse => {
         if(sitemapResponse.status === 404){
@@ -405,7 +394,7 @@ const fetchDataOnCurrentPageChange = currentPage => (dispatch, getState) => {
 
   switch(currentPage.type){
     case PRODUCT_CATEGORY:
-      productFilter = getProductFilterForCategory(app.location.search);
+      productFilter = getProductFilterForCategory(app.location.search, app.settings.default_product_sorting);
       dispatch(setCategory(currentPage.resource));
       dispatch(setProductsFilter(productFilter));
       dispatch(fetchProducts());
@@ -417,10 +406,13 @@ const fetchDataOnCurrentPageChange = currentPage => (dispatch, getState) => {
       analytics.search({ searchText: productFilter.search });
       break;
     case PRODUCT:
-      dispatch(fetchProduct(currentPage.resource))
+      const productData = currentPage.data;
+      dispatch(receiveProduct(productData))
+      analytics.productView({ product: productData })
       break;
     case PAGE:
-      dispatch(fetchPage(currentPage.resource))
+      const pageData = currentPage.data;
+      dispatch(receivePage(pageData))
       if(currentPage.path === '/checkout'){
         analytics.checkoutView({ order: app.cart })
       }

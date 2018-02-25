@@ -1,8 +1,7 @@
 import React from 'react'
-
 import messages from 'lib/text'
 import CategorySelect from 'modules/productCategories/select'
-
+import DeleteConfirmation from 'modules/shared/deleteConfirmation'
 import FontIcon from 'material-ui/FontIcon';
 import IconMenu from 'material-ui/IconMenu';
 import IconButton from 'material-ui/IconButton';
@@ -10,6 +9,7 @@ import MenuItem from 'material-ui/MenuItem';
 import Dialog from 'material-ui/Dialog';
 import FlatButton from 'material-ui/FlatButton';
 import RaisedButton from 'material-ui/RaisedButton';
+const Fragment = React.Fragment;
 
 export default class Buttons extends React.Component {
   constructor(props) {
@@ -52,8 +52,8 @@ export default class Buttons extends React.Component {
   }
 
   render() {
-    const { selected, onMoveUp, onMoveDown, onDelete } = this.props;
-    const categoryName = selected ? selected.name : '';
+    const { selected, onMoveUp, onMoveDown, onDelete, onCreate } = this.props;
+    const categoryName = selected && selected.name && selected.name.length > 0 ? selected.name : 'Draft';
 
     const actionsMoveTo = [
       <FlatButton
@@ -69,59 +69,50 @@ export default class Buttons extends React.Component {
       />,
     ];
 
-    const actionsDelete = [
-      <FlatButton
-        label={messages.cancel}
-        onClick={this.closeDelete}
-        style={{ marginRight: 10 }}
-      />,
-      <FlatButton
-        label={messages.actions_delete}
-        primary={true}
-        keyboardFocused={true}
-        onClick={this.deleteCategory}
-      />,
-    ];
-
     return (
       <span>
-        <IconButton touch={true} tooltipPosition="bottom-left" tooltip={messages.actions_moveUp} onClick={onMoveUp}>
-          <FontIcon color="#fff" className="material-icons">arrow_upward</FontIcon>
+        {selected &&
+          <Fragment>
+            <IconButton touch={true} tooltipPosition="bottom-left" tooltip={messages.actions_moveUp} onClick={onMoveUp}>
+              <FontIcon color="#fff" className="material-icons">arrow_upward</FontIcon>
+            </IconButton>
+            <IconButton touch={true} tooltipPosition="bottom-left" tooltip={messages.actions_moveDown} onClick={onMoveDown}>
+              <FontIcon color="#fff" className="material-icons">arrow_downward</FontIcon>
+            </IconButton>
+            <IconButton touch={true} tooltipPosition="bottom-left" tooltip={messages.actions_delete} onClick={this.showDelete}>
+              <FontIcon color="#fff" className="material-icons">delete</FontIcon>
+            </IconButton>
+            <IconButton touch={true} tooltipPosition="bottom-left" tooltip={messages.actions_moveTo} onClick={this.showMoveTo}>
+              <FontIcon color="#fff" className="material-icons">folder</FontIcon>
+            </IconButton>
+            <Dialog
+              title={messages.actions_moveTo}
+              actions={actionsMoveTo}
+              modal={false}
+              open={this.state.openMoveTo}
+              onRequestClose={this.closeMoveTo}
+              autoScrollBodyContent={true}
+            >
+              <CategorySelect
+                onSelect={this.selectMoveTo}
+                selectedId={this.state.categoryIdMoveTo}
+                showRoot={true}
+                showAll={false}
+              />
+            </Dialog>
+            <DeleteConfirmation
+              open={this.state.openDelete}
+              isSingle={true}
+              itemsCount={1}
+              itemName={categoryName}
+              onCancel={this.closeDelete}
+              onDelete={this.deleteCategory}
+            />
+          </Fragment>
+        }
+        <IconButton touch={true} tooltipPosition="bottom-left" tooltip={messages.productCategories_titleAdd} onClick={onCreate}>
+          <FontIcon color="#fff" className="material-icons">add</FontIcon>
         </IconButton>
-        <IconButton touch={true} tooltipPosition="bottom-left" tooltip={messages.actions_moveDown} onClick={onMoveDown}>
-          <FontIcon color="#fff" className="material-icons">arrow_downward</FontIcon>
-        </IconButton>
-        <IconButton touch={true} tooltipPosition="bottom-left" tooltip={messages.actions_delete} onClick={this.showDelete}>
-          <FontIcon color="#fff" className="material-icons">delete</FontIcon>
-        </IconButton>
-        <IconButton touch={true} tooltipPosition="bottom-left" tooltip={messages.actions_moveTo} onClick={this.showMoveTo}>
-          <FontIcon color="#fff" className="material-icons">folder</FontIcon>
-        </IconButton>
-        <Dialog
-          title={messages.actions_moveTo}
-          actions={actionsMoveTo}
-          modal={false}
-          open={this.state.openMoveTo}
-          onRequestClose={this.closeMoveTo}
-          autoScrollBodyContent={true}
-        >
-          <CategorySelect
-            onSelect={this.selectMoveTo}
-            selectedId={this.state.categoryIdMoveTo}
-            showRoot={true}
-            showAll={false}
-          />
-        </Dialog>
-
-        <Dialog
-          title={messages.messages_deleteConfirmation}
-          actions={actionsDelete}
-          modal={false}
-          open={this.state.openDelete}
-          onRequestClose={this.closeDelete}
-        >
-          {messages.productCategories_aboutDelete.replace('{name}', categoryName)}
-        </Dialog>
       </span>
     )
   }

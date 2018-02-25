@@ -2,14 +2,14 @@
 
 const path = require('path');
 const url = require('url');
+const formidable = require('formidable');
+const fse = require('fs-extra');
+const ObjectID = require('mongodb').ObjectID;
 const settings = require('../../lib/settings');
 const SettingsService = require('../settings/settings');
-var mongo = require('../../lib/mongo');
-var utils = require('../../lib/utils');
-var parse = require('../../lib/parse');
-var ObjectID = require('mongodb').ObjectID;
-var formidable = require('formidable');
-var fs = require('fs-extra');
+const mongo = require('../../lib/mongo');
+const utils = require('../../lib/utils');
+const parse = require('../../lib/parse');
 
 class ProductCategoriesService {
   constructor() {}
@@ -22,17 +22,19 @@ class ProductCategoriesService {
     }
     const id = parse.getObjectIDIfValid(params.id);
     if (id) {
-      filter._id = new ObjectID(id);
+      filter._id = id;
     }
     return filter;
   }
 
-  getCategories(params = {}) {
+  async getCategories(params = {}) {
     const filter = this.getFilter(params);
-    return SettingsService.getSettings().then(generalSettings =>
-      mongo.db.collection('productCategories').find(filter).sort({position: 1}).toArray()
-      .then(items => items.map(c => this.changeProperties(c, generalSettings.domain)))
-    );
+    const projection = utils.getProjectionFromFields(params.fields);
+    const generalSettings = await SettingsService.getSettings();
+    const domain = generalSettings.domain;
+    const items = await mongo.db.collection('productCategories').find(filter, { projection: projection }).sort({position: 1}).toArray();
+    const result = items.map(category => this.changeProperties(category, domain));
+    return result;
   }
 
   getSingleCategory(id) {
@@ -46,16 +48,12 @@ class ProductCategoriesService {
     })
   }
 
-  addCategory(data) {
-    return mongo.db.collection('productCategories').find().sort({position:-1}).limit(1).nextObject()
-    .then(item => {
-      const newPosition = (item && item.position > 0) ? item.position + 1 : 1;
-
-      return this.getValidDocumentForInsert(data, newPosition).then(dataToInsert =>
-        mongo.db.collection('productCategories')
-          .insertMany([dataToInsert])
-          .then(res => this.getSingleCategory(res.ops[0]._id.toString())));
-    });
+  async addCategory(data) {
+    const lastCategory = await mongo.db.collection('productCategories').findOne({}, { sort: {position: -1} });
+    const newPosition = (lastCategory && lastCategory.position > 0) ? lastCategory.position + 1 : 1;
+    const dataToInsert = await this.getValidDocumentForInsert(data, newPosition);
+    const insertResult = await mongo.db.collection('productCategories').insertMany([dataToInsert]);
+    return this.getSingleCategory(insertResult.ops[0]._id.toString());
   }
 
   updateCategory(id, data) {
@@ -92,7 +90,7 @@ class ProductCategoriesService {
     return this.getCategories()
     .then(items => {
       // 2. find category and children
-      var idsToDelete = [];
+      let idsToDelete = [];
       this.findAllChildren(items, id, idsToDelete);
       return idsToDelete;
     })
@@ -111,7 +109,7 @@ class ProductCategoriesService {
       if(idsToDelete) {
         for(let categoryId of idsToDelete) {
           let deleteDir = path.resolve(settings.categoriesUploadPath + '/' + categoryId);
-          fs.remove(deleteDir, err => {});
+          fse.remove(deleteDir, err => {});
         }
         return Promise.resolve(true);
       } else {
@@ -228,14 +226,16 @@ class ProductCategoriesService {
   changeProperties(item, domain) {
     if(item) {
       item.id = item._id.toString();
-      delete item._id;
+      item._id = undefined;
 
       if(item.parent_id) {
         item.parent_id = item.parent_id.toString();
       }
 
-      item.url = url.resolve(domain, item.slug || '');
-      item.path = url.resolve('/', item.slug || '');
+      if(item.slug) {
+        item.url = url.resolve(domain, item.slug || '');
+        item.path = url.resolve('/', item.slug || '');
+      }
 
       if(item.image) {
         item.image = url.resolve(domain, settings.categoriesUploadUrl + '/' + item.id + '/' + item.image);
@@ -247,7 +247,7 @@ class ProductCategoriesService {
 
   deleteCategoryImage(id) {
     let dir = path.resolve(settings.categoriesUploadPath + '/' + id);
-    fs.emptyDirSync(dir);
+    fse.emptyDirSync(dir);
     this.updateCategory(id, { 'image': '' });
   }
 
@@ -261,7 +261,7 @@ class ProductCategoriesService {
       .on('fileBegin', (name, file) => {
         // Emitted whenever a field / value pair has been received.
         let dir = path.resolve(settings.categoriesUploadPath + '/' + categoryId);
-        fs.emptyDirSync(dir);
+        fse.emptyDirSync(dir);
         file.name = utils.getCorrectFileName(file.name);
         file.path = dir + '/' + file.name;
       })

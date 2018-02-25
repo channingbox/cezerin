@@ -3,8 +3,9 @@
 const exec = require('child_process').exec;
 const path = require('path');
 const formidable = require('formidable');
+const winston = require('winston');
 const settings = require('../../lib/settings');
-const dashboardEvents = require('../../lib/events');
+const dashboardWebSocket = require('../../lib/dashboardWebSocket');
 
 class ThemesService {
   constructor() {}
@@ -13,8 +14,10 @@ class ThemesService {
     const randomFileName = Math.floor(Math.random() * 10000);
     exec(`npm --silent run theme:export -- ${randomFileName}.zip`, (error, stdout, stderr) => {
       if (error) {
+        winston.error('Exporting theme failed');
         res.status(500).send(this.getErrorMessage(error));
       } else {
+        winston.info(`Theme successfully exported to ${randomFileName}.zip`);
         if (stdout.includes('success')) {
           res.send({'file': `/${randomFileName}.zip`});
         } else {
@@ -30,12 +33,17 @@ class ThemesService {
         res.status(500).send(this.getErrorMessage(err));
       } else {
         // run async NPM script
-        exec(`npm run theme:install ${fileName} && npm run theme:build:prod`, (error, stdout, stderr) => {
+        winston.info('Installing theme...');
+        exec(`npm run theme:install ${fileName}`, (error, stdout, stderr) => {
+          dashboardWebSocket.send({
+            event: dashboardWebSocket.events.THEME_INSTALLED,
+            payload: fileName
+          });
+
           if (error) {
-            dashboardEvents.sendMessage({'type': dashboardEvents.THEME_INSTALLED, 'success': false})
+            winston.error('Installing theme failed');
           } else {
-            dashboardEvents.sendMessage({'type': dashboardEvents.THEME_INSTALLED, 'success': true})
-            exec('npm run restart', (error, stdout, stderr) => {});
+            winston.info('Theme successfully installed');
           }
         });
         // close request and don't wait result from NPM script

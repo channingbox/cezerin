@@ -1,20 +1,28 @@
-# Cezerin
+# Cezerin - Ecommerce Progressive Web Apps
 
-React and Node.js based e-commerce platform. SPA and PWA. SEO-friendly. Build with Node.js, React, Redux, Express, Babel, WebPack and MongoDB.
+Cezerin is React and Node.js based eCommerce platform. Allows creating a Progressive Web Apps.
 
+Built with:
+* Node.js v8.9
+* React v16
+* Redux
+* Express
+* Babel
+* WebPack
+* MongoDB
 
 ## Dashboard
-Client-side dashboard. Build with React. [Demo dashboard (read only)](https://store.cezerin.com/admin/login?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InB1YmxpY0BjZXplcmluLmNvbSIsInNjb3BlcyI6WyJyZWFkOnNldHRpbmdzIiwicmVhZDpwYXltZW50X21ldGhvZHMiLCJyZWFkOnNoaXBwaW5nX21ldGhvZHMiLCJyZWFkOnNpdGVtYXAiLCJyZWFkOnRoZW1lcyIsInJlYWQ6b3JkZXJfc3RhdHVzZXMiLCJyZWFkOnBhZ2VzIiwicmVhZDpjdXN0b21lcl9ncm91cHMiLCJyZWFkOmN1c3RvbWVycyIsInJlYWQ6b3JkZXJzIiwicmVhZDpwcm9kdWN0X2NhdGVnb3JpZXMiLCJyZWFkOnByb2R1Y3RzIiwiZGFzaGJvYXJkIl0sImp0aSI6IjU5MzkyZjRkMWMwYTQzMDEyMDE2YmEyNSIsImlhdCI6MTQ5NjkxOTg4NSwiZXhwIjoxNTEyNDcxODg1fQ._x3vJ9NoBL1zdNwFvTRFvAQv3HbwCeW53yt14hRm99U)
+Client-side dashboard use JSON Web Token (JWT) to access REST API.
 
-![Cezerin Dashboard](https://cezerin.com/assets/images/cezerin-dashboard-products.png)
+![Cezerin Dashboard](https://cezerin.com/assets/images/cezerin-dashboard-products.png?)
 
 
 ## Store
-SPA and PWA with React server-side rendering. [Demo store](https://store.cezerin.com)
+Single-Page Application with React server-side rendering. [Demo store](https://store.cezerin.com)
 
-![Cezerin Store](https://cezerin.com/assets/images/cezerin-store-item.png)
+[![Cezerin Store](https://cezerin.com/assets/images/cezerin-mobile-product.png)](https://store.cezerin.com)
 
-
+[![Cezerin Store](https://cezerin.com/assets/images/cezerin-mobile-order-summary.png)](https://store.cezerin.com)
 
 ## Installation
 
@@ -26,14 +34,13 @@ SPA and PWA with React server-side rendering. [Demo store](https://store.cezerin
 
 ### Installation
 
-Run Cezerin with [Docker image](https://github.com/cezerin/docker-cezerin) or GitHub:
 
 ```shell
 git clone https://github.com/cezerin/cezerin.git cezerin
 cd cezerin
 npm install
 npm run build
-node start
+npm start
 ```
 
 Then open <http://localhost:3000> to see your app.
@@ -93,8 +100,6 @@ Then open <http://localhost:3000> to see your app.
 ## Documentation
 
 [Documentation](https://github.com/cezerin/cezerin/tree/master/docs)
-
-[API Documentation](https://apidocs.cezerin.com)
 
 
 ## Contributing

@@ -108,20 +108,6 @@ export function receivePaymentMethod(paymentMethodEdit) {
   }
 }
 
-function receivePages(pages) {
-  return {
-    type: t.PAGES_RECEIVE,
-    pages
-  }
-}
-
-export function receivePage(pageEdit) {
-  return {
-    type: t.PAGE_RECEIVE,
-    pageEdit
-  }
-}
-
 function receiveTokens(tokens) {
   return {
     type: t.TOKENS_RECEIVE,
@@ -154,6 +140,20 @@ export function receiveThemeSettingsSchema(schema) {
   return {
     type: t.THEME_SETTINGS_SCHEMA_RECEIVE,
     schema
+  }
+}
+
+function receiveWebhooks(webhooks) {
+  return {
+    type: t.WEBHOOKS_RECEIVE,
+    webhooks
+  }
+}
+
+export function receiveWebhook(webhookEdit) {
+  return {
+    type: t.WEBHOOK_RECEIVE,
+    webhookEdit
   }
 }
 
@@ -336,46 +336,6 @@ export function createPaymentMethod(method) {
   }
 }
 
-export function fetchPages() {
-  return (dispatch, getState) => {
-    return api.pages.list().then(({status, json}) => {
-      dispatch(receivePages(json))
-    }).catch(error => {});
-  }
-}
-
-export function fetchPage(id) {
-  return (dispatch, getState) => {
-    return api.pages.retrieve(id).then(({status, json}) => {
-      dispatch(receivePage(json))
-    }).catch(error => {});
-  }
-}
-
-export function createPage(page) {
-  return (dispatch, getState) => {
-    return api.pages.create(page).then(({status, json}) => {
-      dispatch(fetchPages())
-    }).catch(error => {});
-  }
-}
-
-export function updatePage(page) {
-  return (dispatch, getState) => {
-    return api.pages.update(page.id, page).then(({status, json}) => {
-      dispatch(receivePage(json))
-    }).catch(error => {});
-  }
-}
-
-export function deletePage(pageId) {
-  return (dispatch, getState) => {
-    return api.pages.delete(pageId).then(({status, json}) => {
-      dispatch(fetchPages())
-    }).catch(error => {});
-  }
-}
-
 export function fetchTokens() {
   return (dispatch, getState) => {
     return api.tokens.list().then(({status, json}) => {
@@ -465,6 +425,46 @@ export function updateThemeSettings(settings) {
   return (dispatch, getState) => {
     return api.theme.settings.update(settings).then(() => {
       dispatch(fetchThemeSettings())
+    }).catch(error => {});
+  }
+}
+
+export function fetchWebhooks() {
+  return (dispatch, getState) => {
+    return api.webhooks.list().then(({status, json}) => {
+      dispatch(receiveWebhooks(json))
+    }).catch(error => {});
+  }
+}
+
+export function fetchWebhook(id) {
+  return (dispatch, getState) => {
+    return api.webhooks.retrieve(id).then(({status, json}) => {
+      dispatch(receiveWebhook(json))
+    }).catch(error => {});
+  }
+}
+
+export function createWebhook(webhook) {
+  return (dispatch, getState) => {
+    return api.webhooks.create(webhook).then(({status, json}) => {
+      dispatch(fetchWebhooks())
+    }).catch(error => {});
+  }
+}
+
+export function updateWebhook(webhook) {
+  return (dispatch, getState) => {
+    return api.webhooks.update(webhook.id, webhook).then(({status, json}) => {
+      dispatch(fetchWebhooks())
+    }).catch(error => {});
+  }
+}
+
+export function deleteWebhook(webhookId) {
+  return (dispatch, getState) => {
+    return api.webhooks.delete(webhookId).then(({status, json}) => {
+      dispatch(fetchWebhooks())
     }).catch(error => {});
   }
 }

@@ -26,11 +26,11 @@ const initialState = {
   shippingMethodEdit: {},
   paymentMethodEdit: {},
   paymentGatewayEdit: {},
-  pages: [],
-  pageEdit: null,
   tokens: [],
   tokenEdit: {},
   newToken: null,
+  webhooks: [],
+  webhookEdit: {},
   themeSettings: null,
   themeSettingsSchema: null
 };
@@ -69,10 +69,6 @@ export default(state = initialState, action) => {
       return Object.assign({}, state, {checkoutField: action.checkoutField})
     case t.CHECKOUT_FIELDS_RECEIVE:
       return Object.assign({}, state, {checkoutFields: action.checkoutFields})
-    case t.PAGES_RECEIVE:
-      return Object.assign({}, state, {pages: action.pages})
-    case t.PAGE_RECEIVE:
-      return Object.assign({}, state, {pageEdit: action.pageEdit})
     case t.TOKENS_RECEIVE:
       return Object.assign({}, state, {tokens: action.tokens})
     case t.TOKEN_RECEIVE:
@@ -83,6 +79,10 @@ export default(state = initialState, action) => {
       return Object.assign({}, state, {themeSettings: action.settings})
     case t.THEME_SETTINGS_SCHEMA_RECEIVE:
       return Object.assign({}, state, {themeSettingsSchema: action.schema})
+    case t.WEBHOOKS_RECEIVE:
+      return Object.assign({}, state, {webhooks: action.webhooks})
+    case t.WEBHOOK_RECEIVE:
+      return Object.assign({}, state, {webhookEdit: action.webhookEdit})
     default:
       return state
   }
